@@ -1,35 +1,42 @@
+import os
 from flask import Flask, request, jsonify
 from flask_pymongo import PyMongo
+from bson.json_util import dumps
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = "mongodb+srv://fragrantica_user:ruZmud-bovhyr-nipci9@cluster0.mongodb.net/perfumes_db?retryWrites=true&w=majority"
 
+# Load Mongo URI from environment variable (set this in Render)
+app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
+
+# Setup MongoDB connection
 mongo = PyMongo(app)
 
-@app.route('/')
+# Default route
+@app.route("/")
 def index():
     return "Hello from Fragrantica API!"
 
-@app.route('/search')
-def search_perfume():
-    query = request.args.get('query', '')
+# Search perfumes
+@app.route("/search")
+def search():
+    query = request.args.get("query", "").strip().lower()
+
     if not query:
-        return jsonify({'error': 'Missing query parameter'}), 400
+        return jsonify({"error": "Query parameter is required"}), 400
 
-    perfumes = mongo.db.perfumes.find({"name": {"$regex": query, "$options": "i"}})
-    results = []
-    for perfume in perfumes:
-        results.append({
-            "name": perfume.get("name", ""),
-            "brand": perfume.get("brand", ""),
-            "main_accords": perfume.get("main_accords", []),
-            "longevity": perfume.get("longevity", ""),
-            "sillage": perfume.get("sillage", "")
+    try:
+        perfumes = mongo.db.perfumes.find({
+            "name": {"$regex": query, "$options": "i"}
         })
+        results = list(perfumes)
 
-    if not results:
-        return jsonify({"error": "No perfumes found"}), 404
-    return jsonify(results)
+        if not results:
+            return jsonify({"error": "No perfumes found"}), 404
 
-if __name__ == '__main__':
+        return dumps(results), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
     app.run(debug=True)

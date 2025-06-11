@@ -240,3 +240,43 @@ def about():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+from flask import Flask, request, jsonify
+import requests
+from bs4 import BeautifulSoup
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return 'Hello from Fragrantica API!'
+
+@app.route('/search')
+def search_perfume():
+    query = request.args.get('query')
+    if not query:
+        return jsonify({'error': 'No query provided'}), 400
+
+    # Build search URL
+    search_url = f"https://www.fragrantica.com/search/?q={query.replace(' ', '+')}"
+
+    try:
+        res = requests.get(search_url, headers={'User-Agent': 'Mozilla/5.0'})
+        soup = BeautifulSoup(res.text, 'html.parser')
+
+        # Look for search results
+        results = soup.select('.card-title a')
+        if not results:
+            return jsonify({'error': 'No perfumes found'}), 404
+
+        first_result_url = "https://www.fragrantica.com" + results[0]['href']
+
+        return jsonify({
+            'query': query,
+            'first_result': {
+                'name': results[0].get_text(strip=True),
+                'url': first_result_url
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

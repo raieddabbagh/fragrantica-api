@@ -23,7 +23,7 @@ app.config.update(
 #################################################
 # setup mongo connection
 
-app.config["MONGO_URI"] = "mongodb://localhost:27017/perfumes_db"
+app.config["MONGO_URI"] = "mongodb+srv://fragrantica_user:ruZmud-bovhyr-nipci9@cluster0.okdbh1s.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 # app.config["MONGO_URI"] = "mongodb+srv://<dbName>:<password>@cluster0.s0gp3.mongodb.net/rescue_angels_db?retryWrites=true&w=majority"
 
 mongo = PyMongo(app)

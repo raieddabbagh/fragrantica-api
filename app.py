@@ -1,38 +1,40 @@
-import os
 from flask import Flask, request, jsonify
 from flask_pymongo import PyMongo
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# Use MONGO_URI from Render environment variable
+# MongoDB connection from environment variable
 app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
 
-# Connect to MongoDB
+# Initialize PyMongo
 mongo = PyMongo(app)
 
-@app.route("/")
+@app.route('/')
 def home():
-    return "Hello from Fragrantica API!"
+    return jsonify({"message": "Fragrantica API is running"})
 
-@app.route("/search")
+@app.route('/search')
 def search_perfumes():
-    query = request.args.get("query")
-    if not query:
-        return jsonify({"error": "Query parameter is required"}), 400
+    query = request.args.get('query', '')
+
+    if not mongo.db:
+        return jsonify({"error": "Database connection failed"}), 500
 
     try:
-        perfumes = mongo.db.perfumes.find({"name": {"$regex": query, "$options": "i"}})
-        results = [{"name": p["name"], "brand": p.get("brand", "")} for p in perfumes]
+        # Attempt to query the perfumes collection
+        results = mongo.db.perfumes.find({"name": {"$regex": query, "$options": "i"}})
+        perfumes = list(results)
 
-        if not results:
+        if not perfumes:
             return jsonify({"error": "No perfumes found"}), 404
 
-        return jsonify(results)
+        return jsonify({"results": perfumes})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)

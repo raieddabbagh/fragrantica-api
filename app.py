@@ -6,32 +6,33 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# Load Mongo URI from environment variable
+# Use MONGO_URI from Render environment variable
 app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
 
 # Connect to MongoDB
 mongo = PyMongo(app)
 
 @app.route("/")
-def index():
+def home():
     return "Hello from Fragrantica API!"
 
 @app.route("/search")
-def search_perfume():
+def search_perfumes():
     query = request.args.get("query")
     if not query:
-        return jsonify({"error": "No query provided"}), 400
+        return jsonify({"error": "Query parameter is required"}), 400
 
-    results = mongo.db.perfumes.find({"name": {"$regex": query, "$options": "i"}})
-    perfumes = []
-    for perfume in results:
-        perfume["_id"] = str(perfume["_id"])  # Convert ObjectId to string
-        perfumes.append(perfume)
+    try:
+        perfumes = mongo.db.perfumes.find({"name": {"$regex": query, "$options": "i"}})
+        results = [{"name": p["name"], "brand": p.get("brand", "")} for p in perfumes]
 
-    if not perfumes:
-        return jsonify({"error": "No perfumes found"}), 404
+        if not results:
+            return jsonify({"error": "No perfumes found"}), 404
 
-    return jsonify(perfumes)
+        return jsonify(results)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
